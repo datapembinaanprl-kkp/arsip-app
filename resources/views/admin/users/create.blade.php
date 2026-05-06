@@ -48,7 +48,7 @@
       </label>
       <input type="email" name="email" value="{{ old('email') }}" required
              style="width:100%;padding:9px 13px;border:1.5px solid {{ $errors->has('email') ? '#DC2626' : '#E4E3DF' }};border-radius:8px;font-size:.87rem;outline:none;font-family:inherit"
-             placeholder="contoh@pemkot.id" />
+             placeholder="contoh@arsip.id" />
       @error('email')
         <div style="font-size:.75rem;color:#DC2626;margin-top:4px">{{ $message }}</div>
       @enderror
