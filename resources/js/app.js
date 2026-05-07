@@ -1,4 +1,3 @@
-cat > resources/js/app.js << 'EOF'
 import './bootstrap'
 
 import { createApp, h } from 'vue'
@@ -19,4 +18,3 @@ createInertiaApp({
     },
     progress: { color: '#3b82f6' },
 })
-EOF

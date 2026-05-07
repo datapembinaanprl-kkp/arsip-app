@@ -1,4 +1,3 @@
-cat > resources/js/Pages/GIS/Dashboard.vue << 'EOF'
 <script setup>
 import { ref, onMounted } from 'vue'
 import { Head } from '@inertiajs/vue3'
@@ -171,4 +170,3 @@ const showNotification = (message, type = 'info') => {
             @saved="onFormSaved" @close="formOpen = false" />
     </div>
 </template>
-EOF

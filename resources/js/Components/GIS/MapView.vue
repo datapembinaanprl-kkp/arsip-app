@@ -1,4 +1,3 @@
-cat > resources/js/Components/GIS/MapView.vue << 'EOF'
 <script setup>
 import { ref, watch, onMounted, shallowRef } from 'vue'
 import { useMap } from '@/composables/useMap.js'
@@ -81,4 +80,3 @@ const onCategoryToggle = (cats) => {
             v-model:active-categories="activeCategories" @category-toggle="onCategoryToggle" />
     </div>
 </template>
-EOF

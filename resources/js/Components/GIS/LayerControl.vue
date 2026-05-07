@@ -1,4 +1,3 @@
-cat > resources/js/Components/GIS/LayerControl.vue << 'EOF'
 <script setup>
 import { ref, watch } from 'vue'
 import { getCategoryColor } from '@/helpers/geojson.js'
@@ -65,4 +64,3 @@ const toggleCategory = (kat) => {
         </div>
     </div>
 </template>
-EOF

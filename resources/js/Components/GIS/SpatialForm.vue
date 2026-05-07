@@ -1,4 +1,3 @@
-cat > resources/js/Components/GIS/SpatialForm.vue << 'EOF'
 <script setup>
 import { ref, watch, computed } from 'vue'
 import axios from 'axios'
@@ -160,4 +159,3 @@ const submit = async () => {
         </Transition>
     </Teleport>
 </template>
-EOF

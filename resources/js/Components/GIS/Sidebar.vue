@@ -1,8 +1,3 @@
-php /tmp/make_dashboard.php 2>/dev/null; php -r "
-\$content = file_get_contents('/dev/stdin');
-file_put_contents('resources/js/Components/GIS/Sidebar.vue', \$content);
-echo 'Sidebar.vue created' . PHP_EOL;
-" << 'EOF'
 <script setup>
 import { ref, computed, watch } from 'vue'
 import axios from 'axios'
@@ -152,4 +147,3 @@ defineExpose({ refresh })
         </div>
     </aside>
 </template>
-EOF

@@ -1,4 +1,3 @@
-cat > resources/js/Components/GIS/GeoJsonLayer.vue << 'EOF'
 <script setup>
 import { watch, shallowRef, onBeforeUnmount } from 'vue'
 import { getLeafletStyle, createPointToLayer, buildPopupHtml } from '@/helpers/geojson.js'
@@ -75,4 +74,3 @@ defineExpose({ geoJsonLayer })
 </script>
 
 <template><slot /></template>
-EOF
