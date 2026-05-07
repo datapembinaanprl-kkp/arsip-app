@@ -81,6 +81,16 @@
   </a>
     </a>
 
+    {{-- GIS --}}
+    @hasanyrole('admin|direktur')
+    <a href="{{ route('gis.index') }}"
+    data-tooltip="GIS Dashboard"
+    class="nav-item {{ request()->routeIs('gis.*') ? 'active' : '' }}">
+    <span class="nav-icon">🗺️</span>
+    <span>GIS Dashboard</span>
+    </a>
+    @endhasanyrole
+
     {{-- Struktur Organisasi --}}
     <a href="{{ route('organizational-structure.index') }}"
        data-tooltip="Struktur Organisasi"

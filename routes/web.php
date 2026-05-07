@@ -5,14 +5,14 @@ use App\Http\Controllers\ArchiveController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\AboutController;
 use App\Http\Controllers\ProfileController;
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SurveyController;
 use App\Http\Controllers\OrganizationalStructureController;
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\KanbanController;
 use App\Http\Middleware\EnsureIsDirektur;
-
+use App\Http\Controllers\GIS\SpatialDataController;
+use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 Route::get('/survey', function () {
@@ -119,4 +119,8 @@ Route::middleware(['auth'])
 // ─── CRUD Dokumen ─────────────────────────────────────────────
 Route::middleware(['auth'])
     ->resource('documents', DocumentController::class);
+});
+// GIS Dashboard — proteksi dengan auth middleware yang sudah ada
+Route::middleware(['auth'])->group(function () {
+    Route::get('/gis', [SpatialDataController::class, 'index'])->name('gis.index');
 });

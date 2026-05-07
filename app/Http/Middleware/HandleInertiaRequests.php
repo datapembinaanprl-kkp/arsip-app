@@ -14,7 +14,7 @@ class HandleInertiaRequests extends Middleware
      *
      * @var string
      */
-    protected $rootView = 'app';
+    protected $rootView = 'inertia';
 
     /**
      * Determines the current asset version.
@@ -34,18 +34,26 @@ class HandleInertiaRequests extends Middleware
      * @return array<string, mixed>
      */
     public function share(Request $request): array
-    {
-        $user = $request->user();
+{
+    $user = $request->user();
 
-        return [
-            ...parent::share($request),
-            'name' => config('app.name'),
-            'auth' => [
-                'user' => $user,
-            ],
-            'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
-            'currentTeam' => fn () => $user?->currentTeam ? $user->toUserTeam($user->currentTeam) : null,
-            'teams' => fn () => $user?->toUserTeams(includeCurrent: true) ?? [],
-        ];
-    }
+    return [
+        ...parent::share($request),
+        'name' => config('app.name'),
+        'auth' => [
+            'user' => $user,
+        ],
+        'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+
+        // Hapus currentTeam & teams karena method toUserTeam/toUserTeams
+        // belum ada di User model — comment atau hapus kedua baris ini
+        // 'currentTeam' => fn () => $user?->currentTeam ? $user->toUserTeam($user->currentTeam) : null,
+        // 'teams' => fn () => $user?->toUserTeams(includeCurrent: true) ?? [],
+
+        'flash' => [
+            'success' => $request->session()->get('success'),
+            'error'   => $request->session()->get('error'),
+        ],
+    ];
+}
 }
