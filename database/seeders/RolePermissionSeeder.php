@@ -2,9 +2,7 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -12,108 +10,65 @@ class RolePermissionSeeder extends Seeder
 {
     public function run(): void
     {
-        // Reset cache Spatie sebelum seeder
+        // Reset cache
         app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
-        // ─── 1. Definisi semua permissions ────────────────────
+        // ─── Define all permissions ───────────────────────────
         $permissions = [
             // Dokumen
-            'dokumen.lihat',        // Melihat daftar & detail dokumen
-            'dokumen.upload',       // Mengunggah dokumen baru
-            'dokumen.edit',         // Mengedit metadata dokumen sendiri
-            'dokumen.hapus',        // Soft delete dokumen (admin only)
-            'dokumen.download',     // Mengunduh file dokumen
-            'dokumen.tolak',        // Menolak/reject dokumen ke staf
+            'dokumen.viewAny', 'dokumen.view', 'dokumen.create',
+            'dokumen.edit',    'dokumen.delete', 'dokumen.approve', 'dokumen.export',
 
-            // Laporan
-            'laporan.lihat',        // Melihat halaman laporan & progres
+            // User
+            'user.viewAny', 'user.create', 'user.edit', 'user.delete',
 
-            // Admin
-            'admin.pengguna',       // Kelola pengguna (CRUD)
-            'admin.peran',          // Kelola roles & permissions
-            'admin.kategori',       // Kelola kategori dokumen
-            'admin.sistem',         // Konfigurasi sistem (pengaturan)
+            // Tim Kerja
+            'tim.viewAny', 'tim.create', 'tim.edit', 'tim.delete',
+
+            // Survey
+            'survey.viewAny', 'survey.create', 'survey.edit',
+            'survey.delete',  'survey.export',
+
+            // Dashboard
+            'dashboard.analytics',
         ];
 
-        foreach ($permissions as $perm) {
-            Permission::firstOrCreate(['name' => $perm, 'guard_name' => 'web']);
+        foreach ($permissions as $permission) {
+            Permission::firstOrCreate(['name' => $permission]);
         }
 
-        // ─── 2. Definisi roles & assign permissions ───────────
+        // ─── Define roles with permissions ───────────────────
+        $matrix = [
+            'admin' => $permissions, // semua permission
 
-        // ADMIN — akses penuh
-        $admin = Role::firstOrCreate(['name' => 'admin', 'guard_name' => 'web']);
-        $admin->syncPermissions($permissions); // semua permissions
+            'direktur' => [
+                'dokumen.viewAny', 'dokumen.view', 'dokumen.create',
+                'dokumen.edit',    'dokumen.delete', 'dokumen.approve', 'dokumen.export',
+                'user.viewAny',
+                'tim.viewAny',
+                'survey.viewAny', 'survey.create', 'survey.edit', 'survey.delete', 'survey.export',
+                'dashboard.analytics',
+            ],
 
-        // STAF — upload, lihat, download dokumen sendiri
-        $staf = Role::firstOrCreate(['name' => 'staf', 'guard_name' => 'web']);
-        $staf->syncPermissions([
-            'dokumen.lihat',
-            'dokumen.upload',
-            'dokumen.edit',
-            'dokumen.download',
-        ]);
+            'kepala_tim_kerja' => [
+                'dokumen.viewAny', 'dokumen.view', 'dokumen.create',
+                'dokumen.edit',    'dokumen.delete', 'dokumen.approve',
+                'tim.viewAny',
+                'survey.viewAny',
+                'dashboard.analytics',
+            ],
 
-        // SUPERVISOR — semua staf + bisa reject/tolak
-        $supervisor = Role::firstOrCreate(['name' => 'supervisor', 'guard_name' => 'web']);
-        $supervisor->syncPermissions([
-            'dokumen.lihat',
-            'dokumen.upload',
-            'dokumen.edit',
-            'dokumen.download',
-            'dokumen.tolak',
-            'laporan.lihat',
-        ]);
-
-        // DIREKTUR — semua supervisor + laporan tingkat tinggi + hapus dokumen
-        $direktur = Role::firstOrCreate(['name' => 'direktur', 'guard_name' => 'web']);
-        $direktur->syncPermissions([
-            'dokumen.lihat',
-            'dokumen.upload',
-            'dokumen.edit',
-            'dokumen.download',
-            'dokumen.tolak',
-            'dokumen.hapus',
-            'laporan.lihat',
-        ]);
-
-        // ─── 3. Buat user default untuk setiap role ───────────
-        $this->createDefaultUsers();
-
-        $this->command->info('✅ Roles & Permissions berhasil dibuat.');
-        $this->command->table(
-            ['Role', 'Permissions'],
-            [
-                ['admin',      'Semua permissions'],
-                ['staf',       'lihat, upload, edit, download'],
-                ['supervisor', 'lihat, upload, edit, download, tolak, laporan'],
-                ['direktur',   'lihat, upload, edit, download, tolak, hapus, laporan'],
-            ]
-        );
-    }
-
-    private function createDefaultUsers(): void
-    {
-        $defaults = [
-            ['name' => 'Admin Sistem',   'email' => 'admin@arsip.id',      'role' => 'admin'],
-            ['name' => 'Staf Arsip',     'email' => 'staf@arsip.id',       'role' => 'staf'],
-            ['name' => 'Supervisor',     'email' => 'supervisor@arsip.id', 'role' => 'supervisor'],
-            ['name' => 'Direktur',       'email' => 'direktur@arsip.id',   'role' => 'direktur'],
+            'staff' => [
+                'dokumen.viewAny', 'dokumen.view',
+                'dokumen.create',  'dokumen.edit',
+            ],
         ];
 
-        foreach ($defaults as $data) {
-            $user = User::firstOrCreate(
-                ['email' => $data['email']],
-                [
-                    'name'      => $data['name'],
-                    'password'  => Hash::make('password123'),
-                    'is_active' => true,
-                ]
-            );
-            // Assign role (hapus role lama dulu agar tidak duplikat)
-            $user->syncRoles([$data['role']]);
+        foreach ($matrix as $roleName => $rolePermissions) {
+            $role = Role::firstOrCreate(['name' => $roleName]);
+            $role->syncPermissions($rolePermissions);
         }
 
-        $this->command->info('👤 User default dibuat (password: password123)');
+        $this->command->info('Roles & permissions seeded successfully.');
     }
 }

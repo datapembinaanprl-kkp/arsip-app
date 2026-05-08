@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -9,45 +10,23 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Document extends Model
 {
     protected $fillable = [
-        'judul', 'nomor_dokumen', 'status', 'deadline',
-        'catatan', 'alasan_revisi', 'assignee_id', 'created_by',
-        'diajukan_at', 'disetujui_at', 'selesai_at',
+        'judul',
+        'nomor_dokumen',
+        'deadline',
+        'catatan',
+        'status',
+        'assignee_id',
+        'created_by',
+        'tim_kerja_id',
     ];
 
     protected $casts = [
-        'deadline'     => 'date',
-        'diajukan_at'  => 'datetime',
-        'disetujui_at' => 'datetime',
-        'selesai_at'   => 'datetime',
+        'deadline' => 'date',
     ];
 
-    // ─── Status Config ────────────────────────────────────────────
+    const STATUS_OPTIONS = ['draft', 'review', 'approved', 'rejected', 'archived'];
 
-    /** Label, warna, dan urutan kolom kanban */
-    public const STATUSES = [
-        'draft'     => ['label' => 'Draft',     'color' => 'slate',  'order' => 1],
-        'diajukan'  => ['label' => 'Diajukan',  'color' => 'blue',   'order' => 2],
-        'revisi'    => ['label' => 'Revisi',     'color' => 'orange', 'order' => 3],
-        'disetujui' => ['label' => 'Disetujui', 'color' => 'green',  'order' => 4],
-        'selesai'   => ['label' => 'Selesai',   'color' => 'purple', 'order' => 5],
-    ];
-
-    /**
-     * Transisi status yang diperbolehkan per role.
-     * key = status saat ini, value = status tujuan yang boleh dipilih
-     */
-    public const TRANSITIONS = [
-        'staff' => [
-            'draft'    => ['diajukan'],           // Staff mengajukan
-            'revisi'   => ['diajukan'],            // Staff resubmit setelah revisi
-        ],
-        'direktur' => [
-            'diajukan'  => ['disetujui', 'revisi'], // Direktur setuju atau kembalikan
-            'disetujui' => ['selesai'],              // Direktur finalisasi
-        ],
-    ];
-
-    // ─── Relationships ────────────────────────────────────────────
+    // ─── Relations ────────────────────────────────────────────
 
     public function assignee(): BelongsTo
     {
@@ -59,43 +38,35 @@ class Document extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    public function timKerja(): BelongsTo
+    {
+        return $this->belongsTo(TimKerja::class);
+    }
+
     public function histories(): HasMany
     {
-        return $this->hasMany(DocumentHistory::class)->latest();
+        return $this->hasMany(DocumentHistory::class);
     }
 
-    // ─── Accessors ────────────────────────────────────────────────
+    // ─── Scopes ───────────────────────────────────────────────
 
-    public function getStatusLabelAttribute(): string
+    /**
+     * Filter dokumen berdasarkan role user yang login.
+     *
+     * admin/direktur  → semua dokumen
+     * kepala_tim_kerja → dokumen dari timnya
+     * staff           → dokumen yang di-assign ke dia
+     */
+    public function scopeVisibleFor(Builder $query, User $user): Builder
     {
-        return self::STATUSES[$this->status]['label'] ?? $this->status;
-    }
+        return match (true) {
+            $user->hasAnyRole(['admin', 'direktur']) => $query,
 
-    public function getStatusColorAttribute(): string
-    {
-        return self::STATUSES[$this->status]['color'] ?? 'slate';
-    }
+            $user->hasRole('kepala_tim_kerja') => $query->where(
+                'tim_kerja_id', $user->tim_kerja_id
+            ),
 
-    /** Cek apakah deadline sudah lewat */
-    public function getIsOverdueAttribute(): bool
-    {
-        return $this->deadline && $this->deadline->isPast()
-            && !in_array($this->status, ['selesai', 'disetujui']);
-    }
-
-    // ─── Scopes ───────────────────────────────────────────────────
-
-    /** Filter berdasarkan assignee (untuk tampilan staff — hanya dokumen miliknya) */
-    public function scopeForStaff($query, int $userId)
-    {
-        return $query->where('assignee_id', $userId);
-    }
-
-    // ─── Helpers ──────────────────────────────────────────────────
-
-    /** Ambil transisi yang tersedia untuk role tertentu */
-    public function availableTransitions(string $role): array
-    {
-        return self::TRANSITIONS[$role][$this->status] ?? [];
+            default => $query->where('assignee_id', $user->id),
+        };
     }
 }

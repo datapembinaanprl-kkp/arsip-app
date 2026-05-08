@@ -3,20 +3,24 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Spatie\Permission\Traits\HasRoles; // ← Spatie
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, HasRoles; // FIX: Tambah HasRoles
+    use HasFactory, Notifiable, HasRoles;
 
     protected $fillable = [
         'name',
         'email',
         'password',
-        'is_active',
+        'tim_kerja_id',
+        'phone',
+        'avatar',
+        'last_login_at',
     ];
 
     protected $hidden = [
@@ -28,36 +32,38 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'last_login_at'     => 'datetime',
             'password'          => 'hashed',
-            'is_active'         => 'boolean',
         ];
     }
 
-    // ─── Scopes ───────────────────────────────────────────
+    // ─── Relations ────────────────────────────────────────────
     public function scopeActive($query)
     {
-        return $query->where('is_active', true);
+    return $query->where('is_active', true);
     }
 
-    // ─── Relasi ───────────────────────────────────────────
-    public function archives(): HasMany
+    public function timKerja(): BelongsTo
     {
-        return $this->hasMany(Archive::class);
+        return $this->belongsTo(TimKerja::class);
     }
 
-    // ─── Helper untuk Blade ───────────────────────────────
-    // Cek apakah user punya salah satu dari array role
-    // (Spatie sudah punya hasRole() & hasAnyRole() bawaan)
-
-    // Nama tampilan role dalam Bahasa Indonesia
-    public function getRoleLabelAttribute(): string
+    public function documents(): HasMany
     {
-        return match ($this->getRoleNames()->first()) {
-            'admin'      => 'Administrator',
-            'staf'       => 'Staf',
-            'supervisor' => 'Supervisor',
-            'direktur'   => 'Direktur',
-            default      => 'Pengguna',
-        };
+        return $this->hasMany(Document::class, 'assignee_id');
+    }
+
+    public function createdDocuments(): HasMany
+    {
+        return $this->hasMany(Document::class, 'created_by');
+    }
+
+    // ─── Accessors ────────────────────────────────────────────
+
+    public function getAvatarUrlAttribute(): string
+    {
+        return $this->avatar
+            ? asset('storage/' . $this->avatar)
+            : 'https://ui-avatars.com/api/?name=' . urlencode($this->name) . '&background=6366f1&color=fff&size=80';
     }
 }

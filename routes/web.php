@@ -9,6 +9,8 @@ use App\Http\Controllers\SurveyController;
 use App\Http\Controllers\OrganizationalStructureController;
 use App\Http\Controllers\AssetController;
 use App\Http\Controllers\DocumentController;
+use App\Http\Controllers\TimKerjaController;
+use App\Http\Controllers\UserController;
 use App\Http\Controllers\KanbanController;
 use App\Http\Middleware\EnsureIsDirektur;
 use App\Http\Controllers\GIS\SpatialDataController;
@@ -24,12 +26,21 @@ Route::get('/survey', function () {
 Route::get('/', fn() => auth()->check() ? redirect()->route('dashboard') : redirect()->route('login'));
 Route::get('/about', [AboutController::class, 'index'])->name('about');
 
-// ─── Breeze Auth routes ────────────────────────────────
-require __DIR__.'/auth.php';
-
 // ─── Authenticated routes ─────────────────────────────
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'verified'])->group(function () {
     
+    Route::get('/dashboard', fn () => Inertia::render('Dashboard'))
+         ->name('dashboard');
+ // Dokumen — semua role yang login
+    Route::resource('documents', DocumentController::class);
+
+// Tim Kerja — admin & direktur penuh, kepala & staff view only
+    Route::resource('tim-kerja', TimKerjaController::class);
+    
+ // User Management — admin & direktur saja
+    Route::middleware('can:user.viewAny')->group(function () {
+        Route::resource('users', UserController::class);
+    });
 
 // Dashboard — semua role yang login
 Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -124,3 +135,6 @@ Route::middleware(['auth'])
 Route::middleware(['auth'])->group(function () {
     Route::get('/gis', [SpatialDataController::class, 'index'])->name('gis.index');
 });
+    
+    // ─── Breeze Auth routes ────────────────────────────────
+    require __DIR__.'/auth.php';

@@ -8,7 +8,7 @@
     },
     "devDependencies": {
         "@tailwindcss/forms": "^0.4.0-alpha.2",
-        "@tailwindcss/vite": "^4.0.0",
+        "@tailwindcss/vite": "^4.2.4",
         "@types/leaflet": "^1.9.21",
         "alpinejs": "^3.4.2",
         "autoprefixer": "^10.5.0",
