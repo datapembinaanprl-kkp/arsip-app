@@ -14,7 +14,7 @@ export default function Login({ status, canResetPassword, canRegister }: {
     canRegister: boolean;
 }) {
     const { data, setData, post, processing, errors, reset } = useForm({
-        email: "",
+        email: "",  
         password: "",
         remember: false as boolean,
     });
