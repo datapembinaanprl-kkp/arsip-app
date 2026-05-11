@@ -20,7 +20,7 @@ class NewPasswordController extends Controller
 {
     public function create(Request $request): Response
     {
-        return Inertia::render('auth.reset-password',
+        return Inertia::render('auth/reset-password',
         [
             'email' => $request->email,
             'token' => $request->route('token'),

@@ -26,6 +26,7 @@
     "paths": {
       "@/*": ["resources/js/*"]
     },
+    "ignoreDeprecations": "6.0",
 
     "types": ["vite/client"]
   },

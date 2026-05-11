@@ -25,7 +25,7 @@ class HandleInertiaRequests extends Middleware
                     'name'        => $user->name,
                     'email'       => $user->email,
                     'avatar_url'  => $user->avatar_url,
-                    'role'        => $user->getRoleNames()->first(),
+                    'role'        => $user->role,
                     'permissions' => $user->getAllPermissions()->pluck('name'),
                     'tim_kerja'   => $user->timKerja?->only(['id', 'nama', 'kode']),
                 ] : null,

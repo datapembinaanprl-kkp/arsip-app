@@ -1,3 +1,4 @@
+import '@inertiajs/core';
 import type { Auth } from '@/types/auth';
 import type { Team } from '@/types/teams';
 import type { Config, Router, RouteParam, RouteParamsWithQueryOverload } from 'ziggy-js';
