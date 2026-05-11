@@ -8,13 +8,15 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use App\Services\ActivityLogger;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class OrganizationalStructureController extends Controller
 {
     /**
      * Display the org chart list and tree.
      */
-    public function index(): View
+    public function index(): Response
     {
         // Load root members with their full recursive tree
         $members = OrganizationalStructure::roots()
@@ -24,18 +26,23 @@ class OrganizationalStructureController extends Controller
         // Flat list for table view
         $allMembers = OrganizationalStructure::orderBy('parent_id')->orderBy('order')->get();
 
-        return view('organizational-structure.index', compact('members', 'allMembers'));
+        return Inertia::render('OrganizationalStructure/Index', [
+            'members' => $members,
+            'allMembers' => $allMembers
+        ]);
     }
 
     /**
      * Show create form.
      */
-    public function create(): View
+    public function create(): Response
     {
         // All members available as potential parents (flat list for select dropdown)
         $parents = OrganizationalStructure::orderBy('name')->get();
 
-        return view('organizational-structure.create', compact('parents'));
+        return Inertia::render('OrganizationalStructure/Create', [
+            'parents' => $parents
+        ]);
     }
 
     /**
@@ -67,14 +74,14 @@ class OrganizationalStructureController extends Controller
     /**
      * Show edit form.
      */
-    public function edit(OrganizationalStructure $organizationalStructure): View
+    public function edit(OrganizationalStructure $organizationalStructure): Response
     {
         // Exclude self from parent options to prevent circular reference
         $parents = OrganizationalStructure::where('id', '!=', $organizationalStructure->id)
             ->orderBy('name')
             ->get();
 
-        return view('organizational-structure.edit', [
+        return Inertia::render('OrganizationalStructure/Edit', [
             'member'  => $organizationalStructure,
             'parents' => $parents,
         ]);

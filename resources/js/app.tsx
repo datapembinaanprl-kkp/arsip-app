@@ -1,6 +1,7 @@
 import '../css/app.css';
 
 import { createInertiaApp } from '@inertiajs/react';
+import { route } from 'ziggy-js';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
 
@@ -14,6 +15,12 @@ import SettingsLayout from '@/layouts/settings/layout';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
+
+declare global {
+    interface Window {
+        route: typeof route;
+    }
+}
 createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
 

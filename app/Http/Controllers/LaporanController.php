@@ -10,10 +10,12 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class LaporanController extends Controller
 {
-    public function index(Request $request): View
+    public function index(Request $request): Response
     {
         $bulan = (int) $request->get('bulan', now()->month);
         $tahun = (int) $request->get('tahun', now()->year);
@@ -74,12 +76,18 @@ class LaporanController extends Controller
             'submissions as selesai'    => fn($q) => $q->where('status','selesai'),
         ])->orderByDesc('created_at')->get();
 
-        return view('laporan.index', compact(
-            'summary','chartBidang','chartTipe','aktivitasUser','surveyRecap','bulan','tahun'
-        ));
+        return Inertia::render('laporan/Index', [
+            'summary' => $summary,
+            'chartBidang' => $chartBidang,
+            'chartTipe' => $chartTipe,
+            'aktivitasUser' => $aktivitasUser,
+            'surveyRecap' => $surveyRecap,
+            'bulan' => $bulan,
+            'tahun' => $tahun
+        ]);
     }
 
-    public function retensi(): View
+    public function retensi(): Response
     {
         $user         = auth()->user();
         $isRestricted = $user->hasAnyRole(['kepala_bidang','staff_operator']);
@@ -97,9 +105,13 @@ class LaporanController extends Controller
         $totalWithRetensi = $base->clone()->count();
         $allWithRetensi   = $base->clone()->paginate(20);
 
-        return view('laporan.retensi', compact(
-            'expired','expiring30','expiring90','totalWithRetensi','allWithRetensi'
-        ));
+        return Inertia::render('laporan/Retensi', [
+            'expired' => $expired,
+            'expiring30' => $expiring30,
+            'expiring90' => $expiring90,
+            'totalWithRetensi' => $totalWithRetensi,
+            'allWithRetensi' => $allWithRetensi
+        ]);
     }
 
     public function export(Request $request)

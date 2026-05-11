@@ -1,6 +1,8 @@
-import { useHttp } from '@inertiajs/react';
+import { router } from '@inertiajs/react';
 import { useCallback, useState } from 'react';
 import { qrCode, recoveryCodes, secretKey } from '@/routes/two-factor';
+import { Head } from '@inertiajs/react';
+import { REGEXP_ONLY_DIGITS } from 'input-otp';
 
 export type UseTwoFactorAuthReturn = {
     qrCodeSvg: string | null;

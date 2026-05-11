@@ -8,6 +8,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 use App\Services\ActivityLogger;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class KanbanController extends Controller
 {
@@ -15,7 +17,7 @@ class KanbanController extends Controller
      * Tampilan kanban — hanya direktur.
      * Menampilkan semua dokumen semua staff dikelompokkan per status.
      */
-    public function index(): View
+    public function index(): Response
     {
         // Eager load assignee untuk tiap card
         $documents = Document::with(['assignee', 'histories'])
@@ -39,7 +41,10 @@ class KanbanController extends Controller
             'revisi'   => $documents->where('status', 'revisi')->count(),
         ];
 
-        return view('kanban.index', compact('columns', 'summary'));
+        return Inertia::render('Kanban/Index', [
+            'columns' => $columns,
+            'summary' => $summary,
+        ]);
     }
 
     /**

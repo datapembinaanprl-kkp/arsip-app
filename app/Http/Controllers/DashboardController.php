@@ -2,57 +2,46 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Archive;
-use App\Models\Survey;
+use App\Enums\UserRole;
+use App\Models\Document;
 use App\Models\User;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use App\Models\ActivityLog;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class DashboardController extends Controller
 {
-    public function index(): \Illuminate\View\View
+    public function index(): Response
     {
         $user = auth()->user();
 
-        // ─── Query dasar sesuai role ───────────────────────
-        // Staf: hanya lihat dokumen milik sendiri
-        // Admin/Supervisor/Direktur: lihat semua dokumen aktif
-        $baseQuery = Archive::aktif() // FIX: pakai scope aktif(), bukan where("status"="aktif")
-            ->when(
-                $user->hasRole('staf'),
-                fn($q) => $q->where('user_id', $user->id)
-            );
+        // ── Base query dokumen sesuai role ─────────────────────────────────
+        $base = Document::query();
 
-        // ─── Statistik ────────────────────────────────────
+        if ($user->role === UserRole::Staff) {
+            $base->where('assignee_id', $user->id);
+        }
+
+        // ── Stats ──────────────────────────────────────────────────────────
         $stats = [
-            'total_dokumen'    => (clone $baseQuery)->count(),
-
-            'upload_bulan_ini' => (clone $baseQuery)
+            'total_dokumen'    => (clone $base)->count(),
+            'upload_bulan_ini' => (clone $base)
                 ->whereMonth('created_at', now()->month)
                 ->whereYear('created_at', now()->year)
                 ->count(),
-
-            // Staf aktif hanya tampil untuk non-staf
-            'staf_aktif' => $user->hasRole('staf')
+            'dokumen_review'   => (clone $base)->where('status', 'review')->count(),
+            'dokumen_approved' => (clone $base)->where('status', 'approved')->count(),
+            'dokumen_ditolak'  => (clone $base)->where('status', 'rejected')->count(),
+            'staf_aktif'       => $user->role === UserRole::Staff
                 ? null
-                : User::active()->count(),
-
-            'survey_bulan_ini' => Survey::whereMonth('created_at', now()->month)
-                ->whereYear('created_at', now()->year)
-                ->count(),
-
-            // Dokumen ditolak milik user ini (untuk notifikasi staf)
-            'dokumen_ditolak' => Archive::ditolak()
-                ->where('user_id', $user->id)
-                ->count(),
+                : User::where('status', 'active')->count(),
         ];
 
-        // ─── Chart data (12 bulan tahun ini) ──────────────
-        $chartRaw = (clone $baseQuery)
-            ->selectRaw('EXTRACT(MONTH FROM created_at)::int AS bulan, COUNT(*) AS total')
+        // ── Chart: dokumen per bulan tahun ini ─────────────────────────────
+        $chartRaw = (clone $base)
+            ->selectRaw("EXTRACT(MONTH FROM created_at)::int AS bulan, COUNT(*) AS total")
             ->whereYear('created_at', now()->year)
-            ->groupByRaw('EXTRACT(MONTH FROM created_at)::int')
+            ->groupByRaw("EXTRACT(MONTH FROM created_at)::int")
             ->pluck('total', 'bulan');
 
         $chartData = array_map(
@@ -60,62 +49,68 @@ class DashboardController extends Controller
             range(1, 12)
         );
 
-        // ─── Dokumen terbaru ───────────────────────────────
-        $recentDocs = (clone $baseQuery)
-            ->with('user')
+        // ── Progres per status ─────────────────────────────────────────────
+        $progresStatus = (clone $base)
+            ->selectRaw('status, COUNT(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status')
+            ->toArray();
+
+        // ── Dokumen terbaru ────────────────────────────────────────────────
+        $recentDocs = (clone $base)
+            ->with(['assignee:id,name', 'timKerja:id,nama,kode'])
             ->latest()
             ->limit(6)
-            ->get();
+            ->get(['id', 'judul', 'nomor_dokumen', 'status', 'deadline', 'assignee_id', 'tim_kerja_id', 'created_at']);
 
-        // ─── Dokumen ditolak (untuk staf — notifikasi revisi) ─
-        $dokumenDitolak = $user->hasRole('staf')
-            ? Archive::ditolak()
-                ->where('user_id', $user->id)
-                ->with('reviewer')
-                ->latest('reviewed_at')
-                ->limit(5)
-                ->get()
-            : collect();
+        // ── Deadline mendekat (7 hari ke depan) ───────────────────────────
+        $deadlineAlert = (clone $base)
+            ->whereNotNull('deadline')
+            ->whereDate('deadline', '>=', now())
+            ->whereDate('deadline', '<=', now()->addDays(7))
+            ->whereNotIn('status', ['approved', 'archived'])
+            ->with('assignee:id,name')
+            ->orderBy('deadline')
+            ->limit(5)
+            ->get(['id', 'judul', 'status', 'deadline', 'assignee_id']);
 
-        // ─── Progres per status (untuk supervisor/direktur/admin) ─
-        $progresStatus = [];
-        if ($user->hasAnyRole(['admin', 'supervisor', 'direktur'])) {
-            $progresStatus = Archive::selectRaw('status, COUNT(*) as total')
-                ->groupBy('status')
-                ->pluck('total', 'status')
-                ->toArray();
+        // ── Aktivitas terbaru — safe fallback ─────────────────────────────
+        $recentActivity = [];
+        if (class_exists(\App\Models\ActivityLog::class)) {
+            try {
+                $recentActivity = \App\Models\ActivityLog::with('user:id,name')
+                    ->latest()
+                    ->limit(8)
+                    ->get();
+            } catch (\Throwable) {
+                $recentActivity = [];
+            }
         }
 
-        // Tidak ada AuditLog table → kirim empty collection
-        $recentActivity = collect();
-        $retensiWarning = collect();
-        $recentActivity = ActivityLog::with('user')
-        ->latest()
-        ->take(10)
-        ->get();
-        
-        return view('dashboard', compact(
-            'stats',
-            'chartData',
-            'recentDocs',
-            'recentActivity',
-            'retensiWarning',
-            'dokumenDitolak',
-            'progresStatus',
-        ));
+        return Inertia::render('dashboard', [
+            'stats'          => $stats,
+            'chartData'      => $chartData,
+            'recentDocs'     => $recentDocs,
+            'recentActivity' => $recentActivity,
+            'progresStatus'  => $progresStatus,
+            'deadlineAlert'  => $deadlineAlert,
+        ]);
     }
 
-    // AJAX: chart data per tahun
-    public function chartData(Request $request): JsonResponse
+    public function chartData(Request $request)
     {
         $tahun = (int) $request->get('tahun', now()->year);
         $user  = auth()->user();
 
-        $raw = Archive::aktif()
-            ->when($user->hasRole('staf'), fn($q) => $q->where('user_id', $user->id))
-            ->selectRaw('EXTRACT(MONTH FROM created_at)::int AS bulan, COUNT(*) AS total')
+        $query = Document::query();
+        if ($user->role === UserRole::Staff) {
+            $query->where('assignee_id', $user->id);
+        }
+
+        $raw = $query
+            ->selectRaw("EXTRACT(MONTH FROM created_at)::int AS bulan, COUNT(*) AS total")
             ->whereYear('created_at', $tahun)
-            ->groupByRaw('EXTRACT(MONTH FROM created_at)::int')
+            ->groupByRaw("EXTRACT(MONTH FROM created_at)::int")
             ->pluck('total', 'bulan');
 
         return response()->json(

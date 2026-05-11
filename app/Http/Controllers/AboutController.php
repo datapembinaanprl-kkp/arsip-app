@@ -1,12 +1,13 @@
 <?php
 
 namespace App\Http\Controllers;
+use Inertia\Inertia;
+use Inertia\Response;
 
-// FIX: Hapus Route::get() yang salah ditulis di dalam body method
 class AboutController extends Controller
 {
-    public function index()
+    public function index(): Response
     {
-        return view('about');
+        return Inertia::render('About');
     }
 }

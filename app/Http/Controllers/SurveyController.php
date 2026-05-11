@@ -10,6 +10,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class SurveyController extends Controller
 {
@@ -17,19 +19,21 @@ class SurveyController extends Controller
     // DASHBOARD (auth)
     // ═══════════════════════════════════════════════════════════════
 
-    public function index(): View
+    public function index(): Response
     {
         $surveys = Survey::with('creator')
             ->withCount('submissions')
             ->latest()
             ->paginate(15);
 
-        return view('survey.index', compact('surveys'));
+        return Inertia::render('Survey/Index', [
+            'surveys' => $surveys,
+        ]);
     }
 
-    public function create(): View
+    public function create(): Response
     {
-        return view('survey.create');
+        return Inertia::render('Survey/Create');
     }
 
     public function store(Request $request): RedirectResponse
@@ -83,18 +87,22 @@ class SurveyController extends Controller
             ->with('success', 'Survey berhasil dibuat.');
     }
 
-    public function show(Survey $survey): View
+    public function show(Survey $survey): Response
     {
         $survey->load(['questions', 'creator']);
         $survey->loadCount('submissions');
 
-        return view('survey.show', compact('survey'));
+        return Inertia::render('Survey/Show', [
+            'survey' => $survey,
+        ]);
     }
 
-    public function edit(Survey $survey): View
+    public function edit(Survey $survey): Response
     {
         $survey->load('questions');
-        return view('survey.edit', compact('survey'));
+        return Inertia::render('Survey/Edit', [
+            'survey' => $survey,
+        ]);
     }
 
     public function update(Request $request, Survey $survey): RedirectResponse
@@ -152,27 +160,31 @@ class SurveyController extends Controller
             ->with('success', 'Survey berhasil dihapus.');
     }
 
-    public function results(Survey $survey): View
+    public function results(Survey $survey): Response
     {
         $survey->load('questions');
         $submissions = SurveySubmission::where('survey_id', $survey->id)
             ->latest('submitted_at')
             ->paginate(20);
 
-        return view('survey.results', compact('survey', 'submissions'));
+        return Inertia::render('Survey/Results', [
+            'survey' => $survey,
+            'submissions' => $submissions,
+        ]);
     }
 
     // ═══════════════════════════════════════════════════════════════
     // PUBLIK (tanpa auth)
-    // ═══════════════════════════════════════════════════════════════
-
-    public function publicShow(string $token): View
+    // ════════════════════════════════════
+    public function publicShow(string $token): Response
     {
         $survey = Survey::where('token', $token)
             ->with('questions')
             ->firstOrFail();
 
-        return view('survey.publik', compact('survey'));
+        return Inertia::render('Survey/PublicShow', [
+            'survey' => $survey,
+        ]);
     }
 
     public function publicSubmit(Request $request, string $token): RedirectResponse

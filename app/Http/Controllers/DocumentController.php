@@ -4,179 +4,108 @@ namespace App\Http\Controllers;
 
 use App\Models\Document;
 use App\Models\TimKerja;
+use App\Models\Category;
+use App\Http\Requests\StoreDocumentRequest;
+use App\Http\Requests\UpdateDocumentRequest;
 use App\Models\User;
-use App\Services\ActivityLogger;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use App\Services\ActivityLogger;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
 
-class DocumentController extends Controller
+    class DocumentController extends Controller
 {
     public function index(Request $request): Response
     {
-        $user = Auth::user();
-
         $documents = Document::query()
             ->with([
                 'assignee:id,name',
                 'timKerja:id,nama,kode',
-                'creator:id,name',
             ])
-            ->visibleFor($user)
             ->when($request->filled('search'), function ($q) use ($request) {
-                $q->where(function ($q) use ($request) {
-                    $q->where('judul', 'ilike', "%{$request->search}%")
-                      ->orWhere('nomor_dokumen', 'ilike', "%{$request->search}%");
-                });
+                $term = '%' . $request->search . '%';
+                $q->where(fn($q) =>
+                    $q->where('judul', 'ilike', $term)
+                      ->orWhere('nomor_dokumen', 'ilike', $term)
+                      ->orWhere('catatan', 'ilike', $term)
+                );
             })
-            ->when($request->filled('status'), fn ($q) =>
-                $q->where('status', $request->status)
-            )
-            ->when($request->filled('tim_kerja_id'), fn ($q) =>
+            ->when($request->filled('tim_kerja_id'), fn($q) =>
                 $q->where('tim_kerja_id', $request->tim_kerja_id)
             )
+            ->when($request->filled('status'), fn($q) =>
+                $q->where('status', $request->status)
+            )
+            ->when($request->filled('deadline_from'), fn($q) =>
+                $q->whereDate('deadline', '>=', $request->deadline_from)
+            )
+            ->when($request->filled('deadline_to'), fn($q) =>
+                $q->whereDate('deadline', '<=', $request->deadline_to)
+            )
             ->latest()
-            ->paginate(20)
+            ->paginate(15)
             ->withQueryString();
 
-        return Inertia::render('Documents/Index', [
+        return Inertia::render('Documents/index', [
             'documents'     => $documents,
-            'timKerjas'     => $user->hasAnyRole(['admin', 'direktur'])
-                                ? TimKerja::select('id', 'nama', 'kode')->orderBy('nama')->get()
-                                : [],
-            'staffList'     => $user->hasAnyRole(['admin', 'direktur', 'kepala_tim_kerja'])
-                                ? User::select('id', 'name', 'tim_kerja_id')
-                                      ->when($user->hasRole('kepala_tim_kerja'), fn ($q) =>
-                                          $q->where('tim_kerja_id', $user->tim_kerja_id)
-                                      )
-                                      ->role('staff')
-                                      ->orderBy('name')
-                                      ->get()
-                                : [],
-            'statusOptions' => Document::STATUS_OPTIONS,
-            'filters'       => $request->only(['search', 'status', 'tim_kerja_id']),
+            'tim_kerja_list' => TimKerja::where('is_active', true)->orderBy('nama')->get(['id', 'nama', 'kode']),
+            'filters'       => $request->only(['search', 'tim_kerja_id', 'status', 'deadline_from', 'deadline_to']),
         ]);
     }
 
     public function create(): Response
     {
-        $user = Auth::user();
-
         return Inertia::render('Documents/Create', [
-            'timKerjas' => TimKerja::select('id', 'nama', 'kode')->orderBy('nama')->get(),
-            'staffList' => User::select('id', 'name')
-                               ->role('staff')
-                               ->when($user->hasRole('kepala_tim_kerja'), fn ($q) =>
-                                   $q->where('tim_kerja_id', $user->tim_kerja_id)
-                               )
-                               ->orderBy('name')
-                               ->get(),
+            'tim_kerja_list' => TimKerja::where('is_active', true)->orderBy('nama')->get(['id', 'nama', 'kode']),
+            'status_options' => Document::statusOptions(),
+            'users'          => \App\Models\User::active()->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(StoreDocumentRequest $request)
     {
-        $data = $request->validate([
-            'judul'         => ['required', 'string', 'max:200'],
-            'nomor_dokumen' => ['nullable', 'string', 'max:50', 'unique:documents'],
-            'deadline'      => ['nullable', 'date', 'after_or_equal:today'],
-            'catatan'       => ['nullable', 'string'],
-            'assignee_id'   => ['required', 'exists:users,id'],
-            'tim_kerja_id'  => ['required', 'exists:tim_kerjas,id'],
+        Document::create([
+            ...$request->validated(),
+            'created_by' => Auth::id(),
         ]);
 
-        $data['created_by'] = Auth::id();
-        $data['status']     = 'draft';
-
-        $doc = Document::create($data);
-
-        ActivityLogger::dokumenDibuat($doc->judul, $doc->id);
-
         return redirect()->route('documents.index')
-            ->with('success', 'Dokumen berhasil dibuat.');
+            ->with('success', 'Dokumen berhasil ditambahkan.');
     }
 
     public function show(Document $document): Response
     {
-        $this->authorizeAccess($document);
-
-        $document->load(['assignee', 'creator', 'timKerja', 'histories.changedBy']);
-
         return Inertia::render('Documents/Show', [
-            'document' => $document,
+            'document' => $document->load(['assignee:id,name', 'creator:id,name', 'timKerja', 'histories.changedByUser:id,name']),
         ]);
     }
 
     public function edit(Document $document): Response
     {
-        $this->authorizeAccess($document);
-
-        $user = Auth::user();
-
         return Inertia::render('Documents/Edit', [
-            'document'  => $document,
-            'timKerjas' => TimKerja::select('id', 'nama', 'kode')->orderBy('nama')->get(),
-            'staffList' => User::select('id', 'name')
-                               ->role('staff')
-                               ->when($user->hasRole('kepala_tim_kerja'), fn ($q) =>
-                                   $q->where('tim_kerja_id', $user->tim_kerja_id)
-                               )
-                               ->orderBy('name')
-                               ->get(),
+            'document'       => $document->load(['assignee:id,name', 'timKerja:id,nama,kode']),
+            'tim_kerja_list' => TimKerja::where('is_active', true)->orderBy('nama')->get(['id', 'nama', 'kode']),
+            'status_options' => Document::statusOptions(),
+            'users'          => \App\Models\User::active()->orderBy('name')->get(['id', 'name']),
         ]);
     }
 
-    public function update(Request $request, Document $document): RedirectResponse
+    public function update(UpdateDocumentRequest $request, Document $document)
     {
-        $this->authorizeAccess($document);
+        $document->update($request->validated());
 
-        $data = $request->validate([
-            'judul'         => ['required', 'string', 'max:200'],
-            'nomor_dokumen' => ['nullable', 'string', 'max:50', "unique:documents,nomor_dokumen,{$document->id}"],
-            'deadline'      => ['nullable', 'date'],
-            'catatan'       => ['nullable', 'string'],
-            'assignee_id'   => ['required', 'exists:users,id'],
-            'tim_kerja_id'  => ['required', 'exists:tim_kerjas,id'],
-        ]);
-
-        $document->update($data);
-
-        ActivityLogger::dokumenDiperbarui($document->judul, $document->id);
-
-        return redirect()->route('documents.show', $document)
+        return redirect()->route('documents.index')
             ->with('success', 'Dokumen berhasil diperbarui.');
     }
 
-    public function destroy(Document $document): RedirectResponse
+    public function destroy(Document $document)
     {
-        $this->authorizeAccess($document);
-
-        ActivityLogger::dokumenDihapus($document->judul);
-
         $document->delete();
 
         return redirect()->route('documents.index')
             ->with('success', 'Dokumen berhasil dihapus.');
-    }
-
-    private function authorizeAccess(Document $document): void
-    {
-        $user = Auth::user();
-
-        if ($user->hasAnyRole(['admin', 'direktur'])) {
-            return;
-        }
-
-        if ($user->hasRole('kepala_tim_kerja') && $document->tim_kerja_id === $user->tim_kerja_id) {
-            return;
-        }
-
-        if ($document->assignee_id === $user->id) {
-            return;
-        }
-
-        abort(403);
     }
 }

@@ -10,11 +10,14 @@ return new class extends Migration
     {
         Schema::create('tim_kerjas', function (Blueprint $table) {
             $table->id();
-            $table->string('nama');
+            $table->string('nama', 150);
             $table->string('kode', 20)->unique();
             $table->text('deskripsi')->nullable();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
+
+            $table->index('is_active');
+            $table->index('kode');
         });
     }
 

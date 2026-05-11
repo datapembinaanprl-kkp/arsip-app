@@ -13,12 +13,14 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use App\Services\ActivityLogger;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class AssetController extends Controller
 {
     // ─── CRUD ─────────────────────────────────────────────────────
 
-    public function index(Request $request): View
+    public function index(Request $request): Response
     {
         $assets = Asset::search($request->q)
             ->filterKategori($request->kategori)
@@ -36,12 +38,15 @@ class AssetController extends Controller
             'nilai_total'  => Asset::sum('nilai_perolehan'),
         ];
 
-        return view('assets.index', compact('assets', 'summary'));
+        return Inertia::render('Assets/Index', [
+            'assets' => $assets,
+            'summary' => $summary,
+        ]);
     }
 
-    public function create(): View
+    public function create(): Response
     {
-        return view('assets.create');
+        return Inertia::render('Assets/Create');
     }
 
     public function store(AssetRequest $request): RedirectResponse
@@ -63,15 +68,19 @@ class AssetController extends Controller
             ->with('success', 'Aset berhasil ditambahkan.');
     }
 
-    public function show(Asset $asset): View
+    public function show(Asset $asset): Response
     {
         $asset->load('mutations.createdBy');
-        return view('assets.show', compact('asset'));
+        return Inertia::render('Assets/Show', [
+            'asset' => $asset,
+        ]);
     }
 
-    public function edit(Asset $asset): View
+    public function edit(Asset $asset): Response
     {
-        return view('assets.edit', compact('asset'));
+        return Inertia::render('Assets/Edit', [
+            'asset' => $asset,
+        ]);
     }
 
     public function update(AssetRequest $request, Asset $asset): RedirectResponse

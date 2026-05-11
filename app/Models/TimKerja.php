@@ -2,30 +2,28 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TimKerja extends Model
 {
+    use HasFactory;
+
     protected $fillable = ['nama', 'kode', 'deskripsi', 'is_active'];
 
-    protected $casts = [
-        'is_active' => 'boolean',
-    ];
-
-    public function members(): HasMany
+    protected function casts(): array
     {
-        return $this->hasMany(User::class);
+        return ['is_active' => 'boolean'];
     }
 
     public function documents(): HasMany
     {
-        return $this->hasMany(Document::class);
+        return $this->hasMany(Document::class, 'tim_kerja_id');
     }
 
-    public function kepala(): \Illuminate\Database\Eloquent\Relations\HasOne
+    public function scopeActive($query)
     {
-        return $this->hasOne(User::class)
-                    ->whereHas('roles', fn ($q) => $q->where('name', 'kepala_tim_kerja'));
+        return $query->where('is_active', true);
     }
 }
