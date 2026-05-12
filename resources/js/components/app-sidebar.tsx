@@ -59,6 +59,8 @@ const NAV_ITEMS: NavItem[] = [
         children: [
             { label: 'Semua Dokumen',  href: '/documents',        permission: 'dokumen.viewAny' },
             { label: 'Tambah Dokumen', href: '/documents/create', permission: 'dokumen.create'  },
+            { label: 'Surat Masuk',   href: '/documents/incoming', permission: 'dokumen.viewAny' },
+            { label: 'Surat Keluar',   href: '/documents/outgoing', permission: 'dokumen.viewAny' },
         ],
     },
     {

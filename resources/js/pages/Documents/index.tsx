@@ -335,12 +335,12 @@ export default function DocumentsIndex({ documents, tim_kerja_list, filters }: P
                             <thead>
                                 <tr className="border-b border-gray-100 bg-gray-50/70">
                                     {[
-                                        { label: 'Judul Dokumen',  class: '' },
-                                        { label: 'Tim Kerja',      class: 'hidden md:table-cell' },
-                                        { label: 'Assignee',       class: 'hidden lg:table-cell' },
-                                        { label: 'Status',         class: '' },
-                                        { label: 'Deadline',       class: 'hidden lg:table-cell' },
-                                        { label: '',               class: 'w-10' },
+                                        { label: 'Judul Dokumen',                       class: '' },
+                                        { label: 'Tim Kerja',                           class: 'hidden md:table-cell' },
+                                        { label: 'Assignee',                            class: 'hidden lg:table-cell' },
+                                        { label: 'Status',                              class: '' },
+                                        { label: 'Deadline',                            class: 'hidden lg:table-cell' },
+                                        { label: '',                                    class: 'w-10' },
                                     ].map((col, i) => (
                                         <th key={i} className={`text-left px-4 py-3 font-medium text-gray-500 text-xs uppercase tracking-wide ${col.class}`}>
                                             {col.label}
