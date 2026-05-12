@@ -2,7 +2,6 @@
 
 namespace App\Http\Middleware;
 
-use App\Enums\UserRole;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -13,7 +12,7 @@ class EnsureUserHasRole
     {
         $user = $request->user();
 
-        if (! $user || ! $user->isActive()) {
+        if (!$user || !$user->isActive()) {
             abort(403, 'Akun Anda tidak aktif.');
         }
 
@@ -21,9 +20,8 @@ class EnsureUserHasRole
             return $next($request);
         }
 
-        $allowed = array_map(fn($r) => UserRole::from($r), $roles);
-
-        if (! $user->hasRole(...$allowed)) {
+        // ← langsung pakai string, tidak perlu convert ke enum
+        if (!$user->hasAnyRole($roles)) {
             abort(403, 'Anda tidak memiliki akses ke halaman ini.');
         }
 
