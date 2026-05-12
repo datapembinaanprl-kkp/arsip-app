@@ -1,8 +1,8 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { Link, usePage } from '@inertiajs/react';
 import {
-    LayoutDashboard, FileText, Users, Settings, ChevronLeft,
-    ChevronRight, FolderOpen, Activity, Menu, X, ChevronDown,
+    LayoutDashboard, FolderArchive, FileText, Users, Settings, ChevronLeft,
+    ChevronRight, FolderOpen, Activity, Menu, X, ChevronDown, BarChart,
     ClipboardList,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
@@ -50,40 +50,40 @@ const NAV_ITEMS: NavItem[] = [
         label:      'Dashboard',
         icon:       LayoutDashboard,
         href:       '/dashboard',
-        permission: null,
+        permission: 'dashboard.analytics',
     },
     {
         label:      'Dokumen',
         icon:       FileText,
-        permission: 'documents.view',
+        permission: 'dokumen.viewAny',
         children: [
-            { label: 'Semua Dokumen',  href: '/documents',        permission: 'documents.view'   },
-            { label: 'Tambah Dokumen', href: '/documents/create', permission: 'documents.create' },
+            { label: 'Semua Dokumen',  href: '/documents',        permission: 'dokumen.viewAny' },
+            { label: 'Tambah Dokumen', href: '/documents/create', permission: 'dokumen.create'  },
         ],
     },
     {
         label:      'Tim Kerja',
         icon:       FolderOpen,
         href:       '/tim-kerja',
-        permission: 'tim-kerja.view',
+        permission: 'tim-kerja.viewAny',
     },
     {
         label:      'Pengguna',
         icon:       Users,
         href:       '/users',
-        permission: 'users.view',
+        permission: 'users.viewAny',
     },
     {
         label:      'Log Aktivitas',
         icon:       Activity,
         href:       '/activity-logs',
-        permission: 'activity-logs.view',
+        permission: 'activity-logs.viewAny',
     },
     {
         label:      'Pengaturan',
         icon:       Settings,
         href:       '/settings',
-        permission: 'settings.manage',
+        permission: 'setting.manage',
     },
 ];
 
@@ -197,7 +197,7 @@ function SidebarInner({
     showClose?: boolean;
 }) {
     const { url } = usePage();
-    const { user, role } = useAuth();
+    const { user, role, roles, permissions } = useAuth();
 
     return (
         <div

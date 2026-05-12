@@ -2,6 +2,7 @@ import React from 'react';
 import { AppSidebar, SidebarProvider, MobileMenuButton } from '@/components/app-sidebar';
 import { usePage, Link } from '@inertiajs/react';
 import { Bell, ChevronDown } from 'lucide-react';
+import { SharedProps } from 'react';
 
 interface Props {
     children: React.ReactNode;

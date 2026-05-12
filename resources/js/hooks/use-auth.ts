@@ -1,10 +1,30 @@
 import { usePage } from '@inertiajs/react';
 
+interface AuthUser {
+    id: number;
+    name: string;
+    email: string;
+    avatar_url?: string;
+    roles?: string[];
+    permissions?: string[];
+    tim_kerja?: {
+        id: number;
+        nama: string;
+        kode: string;
+    } | null;
+}
+
+interface Auth {
+    user?: AuthUser | null;
+}
+
+
 // ─── Permission map per role ──────────────────────────────────────────────────
 // Sesuaikan dengan roles yang ada di backend (UserRole enum)
 
 const ROLE_PERMISSIONS: Record<string, string[]> = {
     admin: ['*'],
+    direktur: ['*'],
     kepala_tim_kerja: [
         'documents.view', 'documents.create', 'documents.edit', 'documents.delete',
         'documents.approve', 'categories.view', 'categories.manage',
@@ -23,36 +43,41 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
 
 export function useAuth() {
     const { auth } = usePage().props as {
-        auth: { user?: { id: number; name: string; email: string; role?: string } }
+        auth: Auth;
     };
 
     const user = auth?.user ?? null;
-    const role = user?.role ?? 'viewer';
+    const roles = user?.roles ?? [];
+    const permissions = user?.permissions ?? [];
+
+    // primary role = yang pertama kali muncul di array roles (sesuai urutan di database)
+    const role = roles[0] ?? 'null';
 
     /**
      * Cek apakah user punya permission.
      * Mendukung wildcard: 'documents.*' → cocok dengan 'documents.view', 'documents.edit', dst.
      */
-    const can = (permission: string): boolean => {
-        const permissions = ROLE_PERMISSIONS[role] ?? [];
+       const can = (permission: string): boolean => {
+        if (!permissions.length) return false;
 
-        // Admin → akses semua
-        if (permissions.includes('*')) return true;
-
-        // Match exact
+        // Exact match
         if (permissions.includes(permission)) return true;
 
-        // Match wildcard — misal permission 'documents.*' cocok dengan 'documents.view'
-        const [resource, action] = permission.split('.');
+        // Wildcard check: 'dokumen.*' cocok dengan 'dokumen.viewAny'
+        const [resource] = permission.split('.');
         if (permissions.includes(`${resource}.*`)) return true;
 
-        // Cek jika role punya wildcard untuk resource yang diminta
-        if (action && permissions.some(p => p === `${resource}.*`)) return true;
+        // Reverse wildcard: caller pakai 'dokumen.*', cek apakah ada permission dengan prefix itu
+        if (permission.endsWith('.*')) {
+            const prefix = permission.slice(0, -2);
+            return permissions.some(p => p.startsWith(`${prefix}.`));
+        }
 
         return false;
     };
 
-    const hasRole = (...roles: string[]): boolean => roles.includes(role);
+     const hasRole = (...check: string[]): boolean =>
+        check.some(r => roles.includes(r));
 
-    return { user, role, can, hasRole };
+    return { user, role, roles, permissions, can, hasRole };
 }

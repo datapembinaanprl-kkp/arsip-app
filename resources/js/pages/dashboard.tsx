@@ -1,5 +1,5 @@
 import React from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage} from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import {
     FileText, Users, TrendingUp, AlertCircle,

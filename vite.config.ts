@@ -6,10 +6,10 @@ import path from 'path';
 
 export default defineConfig({
     plugins: [
-        tailwindcss(), // ← HARUS PERTAMA
+        tailwindcss(),
         laravel({
             input: [
-                'resources/css/app.css', // ← tambahkan CSS di sini
+                'resources/css/app.css',
                 'resources/js/app.tsx',
             ],
             refresh: true,
