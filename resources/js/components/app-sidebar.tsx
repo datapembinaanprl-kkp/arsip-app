@@ -76,13 +76,13 @@ const NAV_ITEMS: NavItem[] = [
     {
         label:      'Log Aktivitas',
         icon:       Activity,
-        href:       '/activity-logs',
+        href:       '/admin/activity-logs',
         permission: 'activity-logs.viewAny',
     },
     {
         label:      'Pengaturan',
         icon:       Settings,
-        href:       '/settings',
+        href:       '/admin/settings',
         permission: 'setting.manage',
     },
 ];
