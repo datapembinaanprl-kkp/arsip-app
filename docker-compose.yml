@@ -1,31 +1,56 @@
 services:
 
   app:
-    build: .
-    container_name: laravel_app
-
-    working_dir: /app
-
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: arsip_app
+    restart: unless-stopped
+    working_dir: /var/www/html
     volumes:
-      - .:/app
-
+      - .:/var/www/html
+      - ./storage:/var/www/html/storage
     ports:
       - "8000:8000"
-
     depends_on:
-      - postgres
-
-    command: php artisan serve --host=0.0.0.0 --port=8000
+      postgres:
+        condition: service_healthy
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: arsipapp
+      DB_USERNAME: arsipapp
+      DB_PASSWORD: "Iswandi12345:)"
+    networks:
+      - arsip_network
 
   postgres:
-    image: postgres:16
-
-    container_name: laravel_postgres
-
+    image: postgis/postgis:16-3.4-alpine
+    container_name: arsip_postgres
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: arsip_djprl
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: secret
-
+      POSTGRES_DB: arsipapp
+      POSTGRES_USER: arsipapp
+      POSTGRES_PASSWORD: "Iswandi12345:)"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U arsipapp -d arsipapp"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - arsip_network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  arsip_network:
+    driver: bridge
