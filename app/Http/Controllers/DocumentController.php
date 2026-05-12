@@ -60,7 +60,9 @@ use Inertia\Response;
     {
         return Inertia::render('Documents/Create', [
             'tim_kerja_list' => TimKerja::where('is_active', true)->orderBy('nama')->get(['id', 'nama', 'kode']),
-            'status_options' => Document::statusOptions(),
+            'status_options' => collect(Document::statusOptions())
+            ->map(fn($label, $value) => ['value' => $value, 'label' => $label])
+            ->values(),
             'users'          => \App\Models\User::active()->orderBy('name')->get(['id', 'name']),
         ]);
     }
@@ -88,7 +90,9 @@ use Inertia\Response;
         return Inertia::render('Documents/Edit', [
             'document'       => $document->load(['assignee:id,name', 'timKerja:id,nama,kode']),
             'tim_kerja_list' => TimKerja::where('is_active', true)->orderBy('nama')->get(['id', 'nama', 'kode']),
-            'status_options' => Document::statusOptions(),
+            'status_options' => collect(Document::statusOptions())
+            ->map(fn($label, $value) => ['value' => $value, 'label' => $label])
+            ->values(),
             'users'          => \App\Models\User::active()->orderBy('name')->get(['id', 'name']),
         ]);
     }
